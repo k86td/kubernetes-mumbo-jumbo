@@ -1,0 +1,21 @@
+---
+# removed on may 29
+# apiVersion: networking.k8s.io/v1
+# kind: Ingress
+# metadata:
+#   name: plex-ingress
+#   annotations:
+#     nginx.ingress.kubernetes.io/ssl-redirect: "false"
+#     nginx.ingress.kubernetes.io/app-root: /plex/web/
+# spec:
+#   ingressClassName: nginx
+#   rules:
+#     - http:
+#         paths:
+#           - path: /
+#             pathType: Prefix
+#             backend:
+#               service:
+#                 name: svc-plex-web
+#                 port:
+#                   name: plex-ingress
