@@ -1,0 +1,67 @@
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: nas01-pv-data-jackett
+spec:
+  capacity:
+    storage: 2Ti
+  accessModes:
+    - ReadWriteMany
+  persistentVolumeReclaimPolicy: Retain
+  nfs:
+    path: /volume1/media
+    server: 10.0.0.129
+    readOnly: false
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: nas01-pvc-data-jackett
+spec:
+  volumeName: nas01-pv-data-jackett
+  accessModes:
+    - ReadWriteMany
+  volumeMode: Filesystem
+  resources:
+    requests:
+      storage: 2Ti
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: depl-jackett
+spec:
+  selector:
+    matchLabels:
+      app: jackett
+  replicas: 1
+  template:
+    metadata:
+      name: jackett
+      labels:
+        app: jackett
+    spec:
+      volumes:
+        - name: nfs-data
+          persistentVolumeClaim:
+            claimName: nas01-pvc-data-jackett
+      containers:
+        - name: jackett
+          image: lscr.io/linuxserver/jackett:latest
+          ports:
+            - containerPort: 9117
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: jackett-svc
+spec:
+  type: LoadBalancer
+  loadBalancerIP: 10.0.0.226
+  selector:
+    app: jackett
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 9117

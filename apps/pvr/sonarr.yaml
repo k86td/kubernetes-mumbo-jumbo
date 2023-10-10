@@ -1,0 +1,70 @@
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: nas01-pv-data-sonarr
+spec:
+  capacity:
+    storage: 2Ti
+  accessModes:
+    - ReadWriteMany
+  persistentVolumeReclaimPolicy: Retain
+  nfs:
+    path: /volume1/media
+    server: 10.0.0.129
+    readOnly: false
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: nas01-pvc-data-sonarr
+spec:
+  volumeName: nas01-pv-data-sonarr
+  accessModes:
+    - ReadWriteMany
+  volumeMode: Filesystem
+  resources:
+    requests:
+      storage: 2Ti
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: depl-sonarr
+spec:
+  selector:
+    matchLabels:
+      app: sonarr
+  replicas: 1
+  template:
+    metadata:
+      name: sonarr
+      labels:
+        app: sonarr
+    spec:
+      volumes:
+        - name: nfs-data
+          persistentVolumeClaim:
+            claimName: nas01-pvc-data-sonarr
+      containers:
+        - name: sonarr
+          image: lscr.io/linuxserver/sonarr:latest
+          ports:
+            - containerPort: 8989
+          volumeMounts:
+            - mountPath: /data
+              name: nfs-data
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: sonarr-svc
+spec:
+  type: LoadBalancer
+  loadBalancerIP: 10.0.0.227
+  selector:
+    app: sonarr
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 8989

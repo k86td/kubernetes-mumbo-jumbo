@@ -30,45 +30,51 @@ spec:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: depl-plex-web
+  name: depl-jellyfin-web
 spec:
   selector:
     matchLabels:
-      app: plex-web
+      app: jellyfin-web
   replicas: 1
   template:
     metadata:
-      name: plex-web
+      name: jellyfin-web
       labels:
-        app: plex-web
+        app: jellyfin-web
     spec:
+            # securityContext:
+            #  fsGroup: 911
       volumes:
         - name: nfs-data
           persistentVolumeClaim:
             claimName: nas01-pvc-data
       containers:
-        - name: plex-web
-          image: lscr.io/linuxserver/plex:latest
-          # resources # to add!
+        - name: jellyfin-web
+          image: lscr.io/linuxserver/jellyfin:latest
           ports:
-            - containerPort: 32400
-          env:
-            - name: PLEX_CLAIM
-              value: claim-Nc__sotn_7M-NonDaxps
+            - containerPort: 8096
           volumeMounts:
-            - mountPath: /data
+            - mountPath: /data/tvshows
               name: nfs-data
+              subPath: shows
+            - mountPath: /data/movies
+              name: nfs-data
+              subPath: movies
+            - mountPath: /config
+              name: nfs-data
+              subPath: config/jellyfin/
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: svc-plex-real-port
+  name: jellyfin-svc
 spec:
   type: LoadBalancer
-  loadBalancerIP: 10.115.247.110
+  loadBalancerIP: 10.0.0.224
   selector:
-    app: plex-web
+    app: jellyfin-web
   ports:
-    - protocol: TCP
-      port: 32400
-      targetPort: 32400
+    - name: http-access
+      protocol: TCP
+      port: 80
+      targetPort: 8096

@@ -1,0 +1,76 @@
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: nas01-pv-data
+spec:
+  capacity:
+    storage: 2Ti
+  accessModes:
+    - ReadWriteMany
+  persistentVolumeReclaimPolicy: Retain
+  nfs:
+    path: /volume1/media
+    server: 10.0.0.129
+    readOnly: false
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: nas01-pvc-data
+spec:
+  volumeName: nas01-pv-data
+  accessModes:
+    - ReadWriteMany
+  volumeMode: Filesystem
+  resources:
+    requests:
+      storage: 2Ti
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: depl-plex-web
+spec:
+  selector:
+    matchLabels:
+      app: plex-web
+  replicas: 1
+  template:
+    metadata:
+      name: plex-web
+      labels:
+        app: plex-web
+    spec:
+      securityContext:
+       fsGroup: 911
+      volumes:
+        - name: nfs-data
+          persistentVolumeClaim:
+            claimName: nas01-pvc-data
+      containers:
+        - name: plex-web
+          image: lscr.io/linuxserver/plex:latest
+          ports:
+            - containerPort: 32400
+          volumeMounts:
+            - mountPath: /data
+              name: nfs-data
+            - mountPath: /config
+              name: nfs-data
+              subPath: config/plex/
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: plex-svc
+spec:
+  type: LoadBalancer
+  loadBalancerIP: 10.0.0.224
+  selector:
+    app: plex-web
+  ports:
+    - name: http-access
+      protocol: TCP
+      port: 80
+      targetPort: 32400
